@@ -5,7 +5,7 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("djstripe", "0019_add_customer_discount"),
+        ("djstripe", "0020_alter_session"),
     ]
 
     operations = [
