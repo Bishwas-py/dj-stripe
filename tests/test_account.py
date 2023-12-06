@@ -23,11 +23,9 @@ from . import (
     FAKE_PLATFORM_ACCOUNT,
     AssertStripeFksMixin,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-
-
-from .conftest import CreateAccountMixin
 
 
 class TestAccount(CreateAccountMixin, AssertStripeFksMixin, TestCase):
@@ -230,8 +228,10 @@ class TestAccount(CreateAccountMixin, AssertStripeFksMixin, TestCase):
 
         self.assertEqual(
             account.get_stripe_dashboard_url(),
-            f"https://dashboard.stripe.com/{account.id}/"
-            f"{'test/' if not account.livemode else ''}dashboard",
+            (
+                f"https://dashboard.stripe.com/{account.id}/"
+                f"{'test/' if not account.livemode else ''}dashboard"
+            ),
         )
 
 
@@ -535,7 +535,7 @@ class TestAccountSTRIPE:
             assert account_instance.type == account_json["type"]
             assert account_instance.email == account_json["email"]
 
-        except:
+        except Exception:
             raise
 
         # deleted created Account
@@ -647,7 +647,7 @@ class TestAccountSTRIPE:
                     mock_file.return_value,
                     "api_retrieve",
                     side_effect=stripe.error.PermissionError,
-                ) as mock_retrieve:
+                ):
                     # Invoke _attach_objects_post_save_hook()
                     account_instance._attach_objects_post_save_hook(
                         cls=Account,
@@ -658,10 +658,12 @@ class TestAccountSTRIPE:
         mock_logger.warning.assert_has_calls(
             [
                 call(
-                    f"Cannot retrieve business branding icon for acct {account_instance.id} with the key."
+                    "Cannot retrieve business branding icon for acct"
+                    f" {account_instance.id} with the key."
                 ),
                 call(
-                    f"Cannot retrieve business branding logo for acct {account_instance.id} with the key."
+                    "Cannot retrieve business branding logo for acct"
+                    f" {account_instance.id} with the key."
                 ),
             ]
         )
@@ -685,7 +687,7 @@ class TestAccountSTRIPE:
                     mock_file.return_value,
                     "api_retrieve",
                     side_effect=stripe.error.InvalidRequestError("error message", {}),
-                ) as mock_retrieve:
+                ):
                     # Invoke _attach_objects_post_save_hook()
                     account_instance._attach_objects_post_save_hook(
                         cls=Account,
@@ -716,7 +718,7 @@ class TestAccountSTRIPE:
                 side_effect=stripe.error.InvalidRequestError(
                     "a similar object exists in", {}
                 ),
-            ) as mock_retrieve:
+            ):
                 # Invoke _attach_objects_post_save_hook()
                 account_instance._attach_objects_post_save_hook(
                     cls=Account, data=account_json, api_key=settings.STRIPE_SECRET_KEY
@@ -741,7 +743,7 @@ class TestAccountSTRIPE:
                     mock_file.return_value,
                     "api_retrieve",
                     side_effect=stripe.error.AuthenticationError,
-                ) as mock_retrieve:
+                ):
                     # Invoke _attach_objects_post_save_hook()
                     account_instance._attach_objects_post_save_hook(
                         cls=Account,
@@ -797,8 +799,9 @@ class TestAccountSTRIPE:
             djstripe_account.save()
             djstripe_account.refresh_from_db()
 
-        assert djstripe_account.get_stripe_dashboard_url() == (
-            f"https://dashboard.stripe.com/{djstripe_account.id}/"
+        assert (
+            djstripe_account.get_stripe_dashboard_url()
+            == f"https://dashboard.stripe.com/{djstripe_account.id}/"
             f"{'test/' if not djstripe_account.livemode else ''}dashboard"
         )
 

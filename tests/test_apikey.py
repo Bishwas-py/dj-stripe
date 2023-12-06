@@ -15,7 +15,9 @@ from djstripe.models import Account, APIKey
 from djstripe.models.api import get_api_key_details_by_prefix
 
 from . import FAKE_FILEUPLOAD_ICON, FAKE_FILEUPLOAD_LOGO, FAKE_PLATFORM_ACCOUNT
+from .conftest import CreateAccountMixin
 
+pytestmark = pytest.mark.django_db
 # avoid literal api keys to prevent git secret scanners false-positives
 SK_TEST = "sk_test_" + "XXXXXXXXXXXXXXXXXXXX1234"
 SK_LIVE = "sk_live_" + "XXXXXXXXXXXXXXXXXXXX5678"
@@ -23,9 +25,6 @@ RK_TEST = "rk_test_" + "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX9876"
 RK_LIVE = "rk_live_" + "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX5432"
 PK_TEST = "pk_test_" + "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXAAAA"
 PK_LIVE = "pk_live_" + "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXBBBB"
-
-pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 def test_get_api_key_details_by_prefix():
@@ -99,6 +98,15 @@ class APIKeyTest(CreateAccountMixin, TestCase):
             livemode=False,
             djstripe_owner_account=self.account,
         )
+
+        self.apikey_restricted_test = APIKey.objects.create(
+            type=APIKeyType.secret,
+            name="Test Restricted Secret Key",
+            secret=RK_TEST,
+            livemode=False,
+            djstripe_owner_account=self.account,
+        )
+
         self.apikey_live = APIKey.objects.create(
             type=APIKeyType.secret,
             name="Live Secret Key",
@@ -150,10 +158,15 @@ class APIKeyTest(CreateAccountMixin, TestCase):
         autospec=True,
     )
     def test_refresh_account(self, fileupload_retrieve_mock, account_retrieve_mock):
-        # remove djstripe_owner_account field
-        self.apikey_test.djstripe_owner_account = None
-        self.apikey_test.save()
+        for key in (
+            "apikey_test",
+            "apikey_restricted_test",
+        ):
+            # remove djstripe_owner_account field
+            instance = getattr(self, key)
+            instance.djstripe_owner_account = None
+            instance.save()
 
-        # invoke refresh_Account()
-        self.apikey_test.refresh_account()
-        assert self.apikey_test.djstripe_owner_account.id == FAKE_PLATFORM_ACCOUNT["id"]
+            # invoke refresh_Account()
+            instance.refresh_account()
+            assert instance.djstripe_owner_account.id == FAKE_PLATFORM_ACCOUNT["id"]

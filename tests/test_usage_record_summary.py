@@ -163,14 +163,14 @@ class TestUsageRecordSummary(CreateAccountMixin, AssertStripeFksMixin, TestCase)
                 call(
                     id=FAKE_INVOICE_METERED_SUBSCRIPTION["id"],
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=["discounts"],
+                    expand=["discounts", "lines.data.discounts"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
                 ),
                 call(
                     id="in_16af5A2eZvKYlo2CJjANLL81",
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=["discounts"],
+                    expand=["discounts", "lines.data.discounts"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
                 ),
@@ -226,7 +226,10 @@ class TestUsageRecordSummary(CreateAccountMixin, AssertStripeFksMixin, TestCase)
 
         self.assertEqual(
             str(usage_record_summary),
-            f"Usage Summary for {str(usage_record_summary.subscription_item)} ({str(usage_record_summary.invoice)}) is {fake_usage_data['data'][1]['total_usage']}",
+            (
+                "Usage Summary for"
+                f" {str(usage_record_summary.subscription_item)} ({str(usage_record_summary.invoice)})"
+            ),
         )
 
     @patch(
@@ -286,4 +289,5 @@ class TestUsageRecordSummary(CreateAccountMixin, AssertStripeFksMixin, TestCase)
             id=fake_usage_data["data"][1]["subscription_item"],
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
+            expand=[],
         )

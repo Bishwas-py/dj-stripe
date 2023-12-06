@@ -10,12 +10,11 @@ from djstripe import enums, utils
 from djstripe.admin.forms import APIKeyAdminCreateForm, CustomActionForm
 from tests import FAKE_PLATFORM_ACCOUNT
 
+from .conftest import CreateAccountMixin
 from .fields.models import CustomActionModel
 from .test_apikey import RK_LIVE, RK_TEST, SK_LIVE, SK_TEST
 
 pytestmark = pytest.mark.django_db
-
-from .conftest import CreateAccountMixin
 
 
 class TestCustomActionForm:
@@ -80,9 +79,8 @@ class TestAPIKeyAdminCreateForm(CreateAccountMixin):
 
         if secret.startswith("sk_"):
             assert form.instance.type == enums.APIKeyType.secret
-            assert (
-                form.instance.djstripe_owner_account.id == FAKE_PLATFORM_ACCOUNT["id"]
-            )
+
         elif secret.startswith("rk_"):
             assert form.instance.type == enums.APIKeyType.restricted
-            assert form.instance.djstripe_owner_account is None
+
+        assert form.instance.djstripe_owner_account.id == FAKE_PLATFORM_ACCOUNT["id"]

@@ -5,8 +5,6 @@ import decimal
 from copy import deepcopy
 from unittest.mock import ANY, call, patch
 
-import pytest
-import stripe
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -199,6 +197,7 @@ class TestCustomer(CreateAccountMixin, AssertStripeFksMixin, TestCase):
         customer_mock.assert_called_once_with(
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
             email="",
+            name="",
             idempotency_key=None,
             metadata={},
             stripe_account=None,
@@ -570,47 +569,6 @@ class TestCustomer(CreateAccountMixin, AssertStripeFksMixin, TestCase):
             stripe_account=self.customer.djstripe_owner_account.id,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
         )
-
-    @patch(
-        "stripe.Customer.retrieve", return_value=deepcopy(FAKE_CUSTOMER), autospec=True
-    )
-    def test_add_card_set_default_true(self, customer_retrieve_mock):
-        self.customer.add_card(FAKE_CARD["id"])
-        self.customer.add_card(FAKE_CARD_III["id"])
-
-        self.assertEqual(2, Card.objects.count())
-        self.assertEqual(FAKE_CARD_III["id"], self.customer.default_source.id)
-
-    @patch(
-        "stripe.Customer.retrieve", return_value=deepcopy(FAKE_CUSTOMER), autospec=True
-    )
-    def test_add_card_set_default_false(self, customer_retrieve_mock):
-        # self.customer already has FAKE_CARD as its default payment method
-        self.customer.add_card(FAKE_CARD_III["id"], set_default=False)
-
-        self.assertEqual(2, Card.objects.count())
-        self.assertEqual(FAKE_CARD["id"], self.customer.default_source.id)
-
-    @patch(
-        "stripe.Customer.retrieve", return_value=deepcopy(FAKE_CUSTOMER), autospec=True
-    )
-    def test_add_card_set_default_false_with_single_card_still_becomes_default(
-        self, customer_retrieve_mock
-    ):
-        # delete all already added cards to self.customer
-        Card.objects.all().delete()
-
-        # assert self.customer has no cards
-        self.assertEqual(0, self.customer.legacy_cards.count())
-        self.assertEqual(0, self.customer.sources.count())
-
-        self.customer.add_card(FAKE_CARD["id"], set_default=False)
-
-        # assert new card got added to self.customer
-        self.assertEqual(1, Card.objects.count())
-
-        # self.customer already has FAKE_CARD as its default payment method
-        self.assertEqual(FAKE_CARD["id"], self.customer.default_source.id)
 
     @patch(
         "stripe.Customer.retrieve", return_value=deepcopy(FAKE_CUSTOMER), autospec=True

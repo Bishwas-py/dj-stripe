@@ -140,6 +140,16 @@ def customer_source_webhook_handler(event):
             _handle_crud_like_event(target_cls=models.Card, event=event)
 
 
+@webhooks.handler("identity.verification_session")
+def identity_verification_session_handler(event):
+    """
+    Handle updates to Stripe Identity Verification Session objects.
+
+    Docs: https://stripe.com/docs/api/identity/verification_sessions
+    """
+    _handle_crud_like_event(target_cls=models.VerificationSession, event=event)
+
+
 @webhooks.handler("customer.subscription")
 def customer_subscription_webhook_handler(event):
     """Handle updates to customer subscription objects.
@@ -255,6 +265,32 @@ def dispute_webhook_handler(event):
         _handle_crud_like_event(target_cls=models.Dispute, event=event)
 
 
+@webhooks.handler("source")
+def source_webhook_handler(event):
+    """Handle updates to Source objects
+    - charge: https://stripe.com/docs/api/charges
+    """
+    # will recieve all events of the type source.X.Y so
+    # need to ensure the data object is related to Source Object
+    target_object_type = event.data.get("object", {}).get("object", {})
+
+    if target_object_type == "source":
+        _handle_crud_like_event(target_cls=models.Source, event=event)
+
+
+@webhooks.handler("source.transaction")
+def source_transaction_webhook_handler(event):
+    """Handle updates to Source objects
+    - charge: https://stripe.com/docs/api/charges
+    """
+    # will recieve all events of the type source.transaction.Y so
+    # need to ensure the data object is related to SourceTransaction Object
+    target_object_type = event.data.get("object", {}).get("object", {})
+
+    if target_object_type == "source_transaction":
+        _handle_crud_like_event(target_cls=models.SourceTransaction, event=event)
+
+
 @webhooks.handler(
     "checkout",
     "coupon",
@@ -269,14 +305,13 @@ def dispute_webhook_handler(event):
     "product",
     "setup_intent",
     "subscription_schedule",
-    "source",
     "tax_rate",
     "transfer",
 )
 def other_object_webhook_handler(event):
     """
     Handle updates to checkout, coupon, file, invoice, invoiceitem, payment_intent,
-    plan, product, setup_intent, subscription_schedule, source, tax_rate
+    plan, product, setup_intent, subscription_schedule, tax_rate
     and transfer objects.
 
     Docs for:
@@ -293,7 +328,6 @@ def other_object_webhook_handler(event):
     - product: https://stripe.com/docs/api/products
     - setup_intent: https://stripe.com/docs/api/setup_intents
     - subscription_schedule: https://stripe.com/docs/api/subscription_schedules
-    - source: https://stripe.com/docs/api/sources
     - tax_rate: https://stripe.com/docs/api/tax_rates/
     - transfer: https://stripe.com/docs/api/transfers
     """
@@ -313,7 +347,6 @@ def other_object_webhook_handler(event):
         "transfer": models.Transfer,
         "setup_intent": models.SetupIntent,
         "subscription_schedule": models.SubscriptionSchedule,
-        "source": models.Source,
         "tax_rate": models.TaxRate,
     }.get(event.category)
 
@@ -408,8 +441,10 @@ def _handle_crud_like_event(
         if event.parts[:2] == ["account", "external_account"] and stripe_account:
             kwargs["account"] = models.Account._get_or_retrieve(id=stripe_account)
 
-        # Stripe doesn't allow retrieval of Discount Objects
-        if target_cls not in (models.Discount,):
+        # Stripe doesn't allow direct retrieval of Discount and SourceTransaction Objects
+        # indirect retrieval via Source will not work as SourceTransaction will not have a source attached in
+        # source.transaction.created event
+        if target_cls not in (models.Discount, models.SourceTransaction):
             data = target_cls(**kwargs).api_retrieve(
                 stripe_account=stripe_account, api_key=event.default_api_key
             )

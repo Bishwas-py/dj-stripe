@@ -2,7 +2,7 @@ import stripe
 from django.db import models
 
 from djstripe.models.billing import Discount
-from djstripe.settings import djstripe_settings
+from djstripe.settings import DjstripeSettings
 
 from ..enums import OrderStatus
 from ..fields import (
@@ -12,7 +12,6 @@ from ..fields import (
     StripeForeignKey,
     StripeQuantumCurrencyAmountField,
 )
-from ..settings import djstripe_settings
 from .base import StripeModel
 
 
@@ -30,10 +29,21 @@ class Order(StripeModel):
     stripe_dashboard_item_name = "orders"
 
     amount_subtotal = StripeQuantumCurrencyAmountField(
-        help_text="Order cost before any discounts or taxes are applied. A positive integer representing the subtotal of the order in the smallest currency unit (e.g., 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal currency)."
+        help_text=(
+            "Order cost before any discounts or taxes are applied. A positive integer"
+            " representing the subtotal of the order in the smallest currency unit"
+            " (e.g., 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal"
+            " currency)."
+        )
     )
     amount_total = StripeQuantumCurrencyAmountField(
-        help_text="Total order cost after discounts and taxes are applied. A positive integer representing the cost of the order in the smallest currency unit (e.g., 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal currency). To submit an order, the total must be either 0 or at least $0.50 USD or equivalent in charge currency."
+        help_text=(
+            "Total order cost after discounts and taxes are applied. A positive integer"
+            " representing the cost of the order in the smallest currency unit (e.g.,"
+            " 100 cents to charge $1.00 or 100 to charge ¥100, a zero-decimal"
+            " currency). To submit an order, the total must be either 0 or at least"
+            " $0.50 USD or equivalent in charge currency."
+        )
     )
     application = models.CharField(
         max_length=255,
@@ -56,7 +66,10 @@ class Order(StripeModel):
         ),
     )
     currency = StripeCurrencyCodeField(
-        help_text="Three-letter ISO currency code, in lowercase. Must be a supported currency."
+        help_text=(
+            "Three-letter ISO currency code, in lowercase. Must be a supported"
+            " currency."
+        )
     )
     # not deleting order when customer is deleted, because order may be important for taxation and audit purposes
     customer = StripeForeignKey(
@@ -74,25 +87,41 @@ class Order(StripeModel):
     ip_address = models.GenericIPAddressField(
         null=True,
         blank=True,
-        help_text="A recent IP address of the purchaser used for tax reporting and tax location inference.",
+        help_text=(
+            "A recent IP address of the purchaser used for tax reporting and tax"
+            " location inference."
+        ),
     )
     line_items = JSONField(
-        help_text="A list of line items the customer is ordering. Each line item includes information about the product, the quantity, and the resulting cost. There is a maximum of 100 line items.",
+        help_text=(
+            "A list of line items the customer is ordering. Each line item includes"
+            " information about the product, the quantity, and the resulting cost."
+            " There is a maximum of 100 line items."
+        ),
     )
     payment = JSONField(
-        help_text="Payment information associated with the order. Includes payment status, settings, and a PaymentIntent ID",
+        help_text=(
+            "Payment information associated with the order. Includes payment status,"
+            " settings, and a PaymentIntent ID"
+        ),
     )
     payment_intent = StripeForeignKey(
         "PaymentIntent",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        help_text="ID of the payment intent associated with this order. Null when the order is open.",
+        help_text=(
+            "ID of the payment intent associated with this order. Null when the order"
+            " is open."
+        ),
     )
     shipping_cost = JSONField(
         null=True,
         blank=True,
-        help_text="The details of the customer cost of shipping, including the customer chosen ShippingRate.",
+        help_text=(
+            "The details of the customer cost of shipping, including the customer"
+            " chosen ShippingRate."
+        ),
     )
     shipping_details = JSONField(
         null=True,
@@ -108,7 +137,10 @@ class Order(StripeModel):
         help_text="Tax details about the purchaser for this order.",
     )
     total_details = JSONField(
-        help_text="Tax, discount, and shipping details for the computed total amount of this order.",
+        help_text=(
+            "Tax, discount, and shipping details for the computed total amount of this"
+            " order."
+        ),
     )
 
     def __str__(self):
@@ -132,7 +164,7 @@ class Order(StripeModel):
         self,
         cls,
         data,
-        api_key=djstripe_settings.STRIPE_SECRET_KEY,
+        api_key=DjstripeSettings.STRIPE_SECRET_KEY,
         pending_relations=None,
     ):
         super()._attach_objects_post_save_hook(

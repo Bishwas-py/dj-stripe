@@ -28,9 +28,9 @@ from . import (
     FAKE_TRANSFER,
     FAKE_WEBHOOK_ENDPOINT_1,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 def mock_webhook_handler(webhook_event_trigger):
@@ -43,6 +43,17 @@ class TestWebhookEventTrigger(CreateAccountMixin, TestCase):
     def _send_event(self, event_data):
         return Client().post(
             reverse("djstripe:webhook"),
+            json.dumps(event_data),
+            content_type="application/json",
+            HTTP_STRIPE_SIGNATURE="PLACEHOLDER",
+        )
+
+    def _send_event_webhook_endpoint(self, event_data, uuid):
+        return Client().post(
+            reverse(
+                "djstripe:djstripe_webhook_by_uuid",
+                kwargs={"uuid": uuid},
+            ),
             json.dumps(event_data),
             content_type="application/json",
             HTTP_STRIPE_SIGNATURE="PLACEHOLDER",
@@ -65,7 +76,10 @@ class TestWebhookEventTrigger(CreateAccountMixin, TestCase):
         webhookeventtrigger = WebhookEventTrigger.objects.first()
 
         self.assertEqual(
-            f"id={webhookeventtrigger.id}, valid={webhookeventtrigger.valid}, processed={webhookeventtrigger.processed}",
+            (
+                f"id={webhookeventtrigger.id}, valid={webhookeventtrigger.valid},"
+                f" processed={webhookeventtrigger.processed}"
+            ),
             str(webhookeventtrigger),
         )
 
@@ -196,7 +210,55 @@ class TestWebhookEventTrigger(CreateAccountMixin, TestCase):
             json.dumps(FAKE_EVENT_TRANSFER_CREATED),
             "PLACEHOLDER",
             djstripe_settings.WEBHOOK_SECRET,
-            djstripe_settings.WEBHOOK_TOLERANCE,
+            300,
+        )
+        event_retrieve_mock.assert_not_called()
+
+    @patch.object(Transfer, "_attach_objects_post_save_hook")
+    @patch(
+        "stripe.WebhookSignature.verify_header",
+        return_value=True,
+        autospec=True,
+    )
+    @patch(
+        "stripe.Account.retrieve",
+        return_value=deepcopy(FAKE_STANDARD_ACCOUNT),
+        autospec=True,
+    )
+    @patch(
+        "stripe.Transfer.retrieve", return_value=deepcopy(FAKE_TRANSFER), autospec=True
+    )
+    @patch(
+        "stripe.Event.retrieve",
+        return_value=deepcopy(FAKE_EVENT_TRANSFER_CREATED),
+        autospec=True,
+    )
+    def test_webhook_endpoint_valid_tolerance_pass(
+        self,
+        event_retrieve_mock,
+        transfer_retrieve_mock,
+        account_retrieve_mock,
+        verify_header_mock,
+        transfer__attach_object_post_save_hook_mock,
+    ):
+        # Create WebhookEndpoint
+        fake_webhook = deepcopy(FAKE_WEBHOOK_ENDPOINT_1)
+        fake_webhook["secret"] = "whsec_XXXXXY"
+        fake_webhook["tolerance"] = 500
+        webhook_endpoint = WebhookEndpoint.sync_from_stripe_data(fake_webhook)
+
+        valid_event = deepcopy(FAKE_EVENT_TRANSFER_CREATED)
+        resp = self._send_event_webhook_endpoint(
+            valid_event, webhook_endpoint.djstripe_uuid
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Event.objects.filter(id="evt_invalid").exists())
+        verify_header_mock.assert_called_once_with(
+            json.dumps(FAKE_EVENT_TRANSFER_CREATED),
+            "PLACEHOLDER",
+            "whsec_XXXXXY",
+            500,
         )
         event_retrieve_mock.assert_not_called()
 

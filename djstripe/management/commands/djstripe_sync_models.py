@@ -49,8 +49,10 @@ class Command(BaseCommand):
             "args",
             metavar="ModelName",
             nargs="*",
-            help="restricts sync to these model names (default is to sync all "
-            "supported models)",
+            help=(
+                "restricts sync to these model names (default is to sync all "
+                "supported models)"
+            ),
         )
         # Named (optional) arguments
         parser.add_argument(
@@ -93,7 +95,8 @@ class Command(BaseCommand):
 
             if not api_qs.exists():
                 self.stderr.write(
-                    "You don't have any API Keys in the database. Did you forget to add them?"
+                    "You don't have any API Keys in the database. Did you forget to add"
+                    " them?"
                 )
                 return
 
@@ -113,6 +116,7 @@ class Command(BaseCommand):
                 models.ApplicationFeeRefund,
                 models.LineItem,
                 models.Source,
+                models.SourceTransaction,
                 models.TransferReversal,
                 models.TaxId,
                 models.UsageRecordSummary,
@@ -160,7 +164,9 @@ class Command(BaseCommand):
                         stripe_obj, api_key=api_key.secret
                     )
                     self.stdout.write(
-                        f"  id={djstripe_obj.id}, pk={djstripe_obj.pk} ({djstripe_obj} on {stripe_account} for {api_key})"
+                        f"  id={djstripe_obj.id},"
+                        f" pk={djstripe_obj.pk} ({djstripe_obj} on {stripe_account} for"
+                        f" {api_key})"
                     )
 
                     # syncing BankAccount and Card objects of Stripe Connected Express and Custom Accounts
@@ -179,7 +185,9 @@ class Command(BaseCommand):
                                 stripe_obj, api_key=api_key.secret
                             )
                             self.stdout.write(
-                                f"  id={djstripe_obj.id}, pk={djstripe_obj.pk} ({djstripe_obj} on {stripe_account} for {api_key})"
+                                f"  id={djstripe_obj.id},"
+                                f" pk={djstripe_obj.pk} ({djstripe_obj} on"
+                                f" {stripe_account} for {api_key})"
                             )
                             # syncing BankAccount and Card objects of Stripe Connected Express and Custom Accounts
                             self.sync_bank_accounts_and_cards(
@@ -360,6 +368,30 @@ class Command(BaseCommand):
         return all_list_kwargs
 
     @staticmethod
+    def get_list_kwargs_srctxn(default_list_kwargs):
+        """Returns sequence of kwargs to sync SourceTransactions for
+        all Stripe Accounts"""
+
+        all_list_kwargs = []
+        for def_kwarg in default_list_kwargs:
+            stripe_account = def_kwarg.get("stripe_account")
+            api_key = def_kwarg.get("api_key")
+            for stripe_customer in models.Customer.api_list(
+                stripe_account=stripe_account, api_key=api_key
+            ):
+                all_list_kwargs.append({"id": stripe_customer.id, **def_kwarg})
+
+                # fetch all Sources associated with the current customer instance
+                for source in models.Customer.stripe_class.list_sources(
+                    id=stripe_customer.id,
+                    stripe_account=stripe_account,
+                    object="source",
+                    api_key=api_key,
+                ).auto_paging_iter():
+                    all_list_kwargs.append({"id": source.id, **def_kwarg})
+        return all_list_kwargs
+
+    @staticmethod
     def get_list_kwargs_si(default_list_kwargs):
         """Returns sequence of kwargs to sync Subscription Items for
         all Stripe Accounts"""
@@ -473,6 +505,7 @@ class Command(BaseCommand):
             "LineItem": self.get_list_kwargs_il,
             "PaymentMethod": self.get_list_kwargs_pm,
             "Source": self.get_list_kwargs_src,
+            "SourceTransaction": self.get_list_kwargs_srctxn,
             "SubscriptionItem": self.get_list_kwargs_si,
             "CountrySpec": self.get_list_kwargs_country_spec,
             "TransferReversal": self.get_list_kwargs_trr,
@@ -543,7 +576,8 @@ class Command(BaseCommand):
             item_obj = model.sync_from_stripe_data(item, api_key=api_key)
 
             self.stdout.write(
-                f"\tSyncing {model._meta.verbose_name} ({instance}): id={item_obj.id}, pk={item_obj.pk}"
+                f"\tSyncing {model._meta.verbose_name} ({instance}): id={item_obj.id},"
+                f" pk={item_obj.pk}"
             )
 
         if bank_count + card_count > 0:

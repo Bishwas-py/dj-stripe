@@ -1,6 +1,6 @@
 exclude: ".git|.tox|.pytest_cache"
 default_stages: [commit]
-fail_fast: true
+fail_fast: false
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -14,7 +14,7 @@ repos:
       - id: trailing-whitespace
 
   - repo: https://github.com/psf/black
-    rev: "23.1.0"
+    rev: "23.3.0"
     hooks:
       - id: black
 
@@ -24,7 +24,16 @@ repos:
       - id: isort
 
   - repo: https://github.com/adamchainz/django-upgrade
-    rev: "1.12.0"
+    rev: "1.13.0"
     hooks:
       - id: django-upgrade
         args: [--target-version, "3.2"]
+
+  - repo: local
+    hooks:
+      - id: check-migrations
+        name: check-migrations
+        entry: poetry run python manage.py makemigrations --dry-run --check
+        types: [ python ]
+        pass_filenames: false
+        language: system

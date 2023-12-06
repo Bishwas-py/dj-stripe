@@ -35,10 +35,9 @@ from . import (
     FAKE_UPCOMING_INVOICE,
     AssertStripeFksMixin,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-
-from .conftest import CreateAccountMixin
 
 
 class InvoiceTest(CreateAccountMixin, AssertStripeFksMixin, TestCase):
@@ -568,7 +567,7 @@ class InvoiceTest(CreateAccountMixin, AssertStripeFksMixin, TestCase):
         invoice_retrieve_mock.assert_called_once_with(
             id=invoice.id,
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
-            expand=["discounts"],
+            expand=["discounts", "lines.data.discounts"],
             stripe_account=invoice.djstripe_owner_account.id,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
         )
@@ -1473,14 +1472,28 @@ class InvoiceTest(CreateAccountMixin, AssertStripeFksMixin, TestCase):
             [
                 call(
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=[],
+                    expand=[
+                        "customer",
+                        "default_payment_method",
+                        "default_source",
+                        "latest_invoice",
+                        "pending_setup_intent",
+                        "schedule",
+                    ],
                     id=FAKE_SUBSCRIPTION["id"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
                 ),
                 call(
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=[],
+                    expand=[
+                        "customer",
+                        "default_payment_method",
+                        "default_source",
+                        "latest_invoice",
+                        "pending_setup_intent",
+                        "schedule",
+                    ],
                     id=FAKE_SUBSCRIPTION["id"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
@@ -1601,14 +1614,28 @@ class InvoiceTest(CreateAccountMixin, AssertStripeFksMixin, TestCase):
             [
                 call(
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=[],
+                    expand=[
+                        "customer",
+                        "default_payment_method",
+                        "default_source",
+                        "latest_invoice",
+                        "pending_setup_intent",
+                        "schedule",
+                    ],
                     id=FAKE_SUBSCRIPTION["id"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
                 ),
                 call(
                     api_key=djstripe_settings.STRIPE_SECRET_KEY,
-                    expand=[],
+                    expand=[
+                        "customer",
+                        "default_payment_method",
+                        "default_source",
+                        "latest_invoice",
+                        "pending_setup_intent",
+                        "schedule",
+                    ],
                     id=FAKE_SUBSCRIPTION["id"],
                     stripe_account=None,
                     stripe_version="2020-08-27",
@@ -1712,7 +1739,14 @@ class InvoiceTest(CreateAccountMixin, AssertStripeFksMixin, TestCase):
 
         subscription_retrieve_mock.assert_called_once_with(
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
-            expand=[],
+            expand=[
+                "customer",
+                "default_payment_method",
+                "default_source",
+                "latest_invoice",
+                "pending_setup_intent",
+                "schedule",
+            ],
             id=FAKE_INVOICE_METERED_SUBSCRIPTION_USAGE["id"],
             stripe_account=None,
             stripe_version="2020-08-27",

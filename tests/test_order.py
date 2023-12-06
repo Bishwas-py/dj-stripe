@@ -31,9 +31,9 @@ from . import (
     FAKE_SUBSCRIPTION_ITEM,
     AssertStripeFksMixin,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestOrder(CreateAccountMixin, AssertStripeFksMixin, TestCase):
@@ -91,6 +91,7 @@ class TestOrder(CreateAccountMixin, AssertStripeFksMixin, TestCase):
         balance_transaction_retrieve_mock,
     ):
         default_expected_blank_fks = {
+            "djstripe.Customer.coupon",
             "djstripe.Customer.default_payment_method",
             "djstripe.Customer.subscriber",
             "djstripe.Customer.coupon",

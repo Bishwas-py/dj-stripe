@@ -29,9 +29,36 @@ class StripeBaseModel(models.Model):
 
     djstripe_created = models.DateTimeField(auto_now_add=True, editable=False)
     djstripe_updated = models.DateTimeField(auto_now=True, editable=False)
+    stripe_data = JSONField(default=dict)
 
     class Meta:
         abstract = True
+
+    @classmethod
+    def get_expand_params(cls, api_key, **kwargs):
+        """Populate `expand` kwarg in stripe api calls by updating the kwargs passed."""
+        # To avoid Circular Import Error
+        from djstripe.management.commands.djstripe_sync_models import Command
+
+        # As api_list is a class method we will never get the stripe account unless we
+        # default to the owner account of the api_key. But even that is pointless as we only care about expand
+        # So no need to make a call to Stripe and again do an account object sync which would make
+        # no sense if this is for a Stripe Connected Account
+        expand = Command.get_default_list_kwargs(
+            cls, {kwargs.get("stripe_account", "acct_fake")}, api_key
+        )[0].get("expand", [])
+
+        # Add expand to the provided list
+        if kwargs.get("expand"):
+            kwargs["expand"].extend(expand)
+        else:
+            kwargs["expand"] = expand
+
+        # Keep only unique elements
+        # Sort it to ensure the items are returned in the same order
+        kwargs["expand"] = sorted(list(set(kwargs["expand"])))
+
+        return kwargs
 
     @classmethod
     def api_list(cls, api_key=djstripe_settings.STRIPE_SECRET_KEY, **kwargs):
@@ -46,6 +73,8 @@ class StripeBaseModel(models.Model):
 
         :returns: an iterator over all items in the query
         """
+        # Update kwargs with `expand` param
+        kwargs = cls.get_expand_params(api_key, **kwargs)
 
         return cls.stripe_class.list(
             api_key=api_key,
@@ -81,9 +110,11 @@ class StripeModel(StripeBaseModel):
         null=True,
         default=None,
         blank=True,
-        help_text="Null here indicates that the livemode status is unknown or was "
-        "previously unrecorded. Otherwise, this field indicates whether this record "
-        "comes from Stripe test mode or live mode operation.",
+        help_text=(
+            "Null here indicates that the livemode status is unknown or was previously"
+            " unrecorded. Otherwise, this field indicates whether this record comes"
+            " from Stripe test mode or live mode operation."
+        ),
     )
     created = StripeDateTimeField(
         null=True,
@@ -93,9 +124,11 @@ class StripeModel(StripeBaseModel):
     metadata = JSONField(
         null=True,
         blank=True,
-        help_text="A set of key/value pairs that you can attach to an object. "
-        "It can be useful for storing additional information about an object in "
-        "a structured format.",
+        help_text=(
+            "A set of key/value pairs that you can attach to an object. "
+            "It can be useful for storing additional information about an object in "
+            "a structured format."
+        ),
     )
     description = models.TextField(
         null=True, blank=True, help_text="A description of this object."
@@ -191,13 +224,15 @@ class StripeModel(StripeBaseModel):
             for which this request is being made.
         :type stripe_account: string
         """
+        api_key = api_key or self.default_api_key
+
         # Prefer passed in stripe_account if set.
         if not stripe_account:
             stripe_account = self._get_stripe_account_id(api_key)
 
         return self.stripe_class.retrieve(
             id=self.id,
-            api_key=api_key or self.default_api_key,
+            api_key=api_key,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
             expand=self.expand_fields,
             stripe_account=stripe_account,
@@ -231,6 +266,7 @@ class StripeModel(StripeBaseModel):
         :type stripe_account: string
         """
         api_key = api_key or self.default_api_key
+
         # Prefer passed in stripe_account if set.
         if not stripe_account:
             stripe_account = self._get_stripe_account_id(api_key)
@@ -255,6 +291,7 @@ class StripeModel(StripeBaseModel):
         :type stripe_account: string
         """
         api_key = api_key or self.default_api_key
+
         # Prefer passed in stripe_account if set.
         if not stripe_account:
             stripe_account = self._get_stripe_account_id(api_key)
@@ -343,13 +380,19 @@ class StripeModel(StripeBaseModel):
                 % (manipulated_data.get("object", ""), cls.__name__)
             )
 
-        result = {}
+        # By default we put the  raw stripe data in the stripe_data json field
+        result = {"stripe_data": data}
+
         if current_ids is None:
             current_ids = set()
 
         # Iterate over all the fields that we know are related to Stripe,
         # let each field work its own magic
-        ignore_fields = ["date_purged", "subscriber"]  # XXX: Customer hack
+        ignore_fields = [
+            "date_purged",
+            "subscriber",
+            "stripe_data",
+        ]  # XXX: Customer hack
 
         # get all forward and reverse relations for given cls
         for field in cls._meta.get_fields():
@@ -439,7 +482,7 @@ class StripeModel(StripeBaseModel):
         :type stripe_account: string
         :return:
         """
-        from djstripe.models import DjstripePaymentMethod, InvoiceOrLineItem
+        from djstripe.models import DjstripePaymentMethod
 
         field_data = None
         field_name = field.name
@@ -451,9 +494,7 @@ class StripeModel(StripeBaseModel):
         if current_ids is None:
             current_ids = set()
 
-        if issubclass(
-            field.related_model, (StripeModel, DjstripePaymentMethod, InvoiceOrLineItem)
-        ):
+        if issubclass(field.related_model, (StripeModel, DjstripePaymentMethod)):
             if field_name in manipulated_data:
                 raw_field_data = manipulated_data.get(field_name)
 
@@ -696,7 +737,8 @@ class StripeModel(StripeBaseModel):
             # An empty field - We need to return nothing here because there is
             # no way of knowing what needs to be fetched!
             raise RuntimeError(
-                f"dj-stripe encountered an empty field {cls.__name__}.{field_name} = {field}"
+                f"dj-stripe encountered an empty field {cls.__name__}.{field_name} ="
+                f" {field}"
             )
         elif id_ == field:
             # A field like {"subscription": "sub_6lsC8pt7IcFpjA", ...}

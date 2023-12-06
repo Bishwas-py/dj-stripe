@@ -483,6 +483,10 @@ FAKE_SOURCE_II = SourceDict(
 )
 
 
+FAKE_SOURCE_TRANSACTION = load_fixture(
+    "sourcetransaction_srctxn_fakefakefakefakefake0001.json"
+)
+
 FAKE_PAYMENT_INTENT_I = load_fixture("payment_intent_pi_fakefakefakefakefake0001.json")
 
 FAKE_PAYMENT_INTENT_II = deepcopy(FAKE_PAYMENT_INTENT_I)
@@ -588,7 +592,7 @@ FAKE_EVENT_ORDER_CANCELLED["data"]["object"]["status"] = "canceled"
 
 
 FAKE_EVENT_ORDER_COMPLETED = deepcopy(FAKE_EVENT_ORDER_UPDATED)
-FAKE_EVENT_ORDER_COMPLETED["type"] = "order.complete"
+FAKE_EVENT_ORDER_COMPLETED["type"] = "order.completed"
 FAKE_EVENT_ORDER_COMPLETED["data"]["object"]["status"] = "complete"
 
 # TODO - add to regenerate_test_fixtures and replace this with a JSON fixture
@@ -607,7 +611,9 @@ FAKE_SETUP_INTENT_I = {
 FAKE_SETUP_INTENT_II = {
     "application": None,
     "cancellation_reason": None,
-    "client_secret": "seti_1J0g0WJSZQVUcJYgWE2XSi1K_secret_Jdxw2mOaIEHBdE6eTsfJ2IfmamgNJaF",
+    "client_secret": (
+        "seti_1J0g0WJSZQVUcJYgWE2XSi1K_secret_Jdxw2mOaIEHBdE6eTsfJ2IfmamgNJaF"
+    ),
     "created": 1623301244,
     "customer": "cus_6lsBvm5rJ0zyHc",
     "description": None,
@@ -1090,7 +1096,7 @@ class SubscriptionDict(StripeItem):
         self["items"] = StripeList(self["items"])
 
     def __setattr__(self, name, value):
-        if type(value) == datetime.datetime:
+        if type(value) is datetime.datetime:
             value = datetime_to_unix(value)
 
         # Special case for price and plan

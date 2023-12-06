@@ -21,9 +21,9 @@ from . import (
     FAKE_DISPUTE_PAYMENT_INTENT,
     FAKE_FILEUPLOAD_ICON,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestDispute(CreateAccountMixin, TestCase):
@@ -213,6 +213,8 @@ class TestDispute(CreateAccountMixin, TestCase):
         dispute = Dispute.sync_from_stripe_data(FAKE_DISPUTE_I)
         self.assertEqual(
             dispute.get_stripe_dashboard_url(),
-            f"{dispute._get_base_stripe_dashboard_url()}"
-            f"{dispute.stripe_dashboard_item_name}/{dispute.payment_intent.id}",
+            (
+                f"{dispute._get_base_stripe_dashboard_url()}"
+                f"{dispute.stripe_dashboard_item_name}/{dispute.payment_intent.id}"
+            ),
         )

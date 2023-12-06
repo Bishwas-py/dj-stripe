@@ -19,9 +19,9 @@ from . import (
     FAKE_USAGE_RECORD,
     AssertStripeFksMixin,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestUsageRecord(CreateAccountMixin, AssertStripeFksMixin, TestCase):
@@ -115,7 +115,7 @@ class TestUsageRecord(CreateAccountMixin, AssertStripeFksMixin, TestCase):
 
         self.assertEqual(
             str(usage_record),
-            f"Usage for {str(usage_record.subscription_item)} ({fake_usage_data['action']}) is {fake_usage_data['quantity']}",
+            ("Usage for" f" {str(usage_record.subscription_item)}"),
         )
 
     @patch(

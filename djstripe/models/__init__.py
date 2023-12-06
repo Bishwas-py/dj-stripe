@@ -6,7 +6,6 @@ from .billing import (
     Discount,
     Invoice,
     InvoiceItem,
-    InvoiceOrLineItem,
     LineItem,
     Plan,
     ShippingRate,
@@ -45,6 +44,7 @@ from .core import (
     Refund,
     SetupIntent,
 )
+from .identity import VerificationReport, VerificationSession
 from .orders import Order
 from .payment_methods import (
     BankAccount,
@@ -52,6 +52,7 @@ from .payment_methods import (
     DjstripePaymentMethod,
     PaymentMethod,
     Source,
+    SourceTransaction,
 )
 from .sigma import ScheduledQueryRun
 from .webhooks import WebhookEndpoint, WebhookEventTrigger
@@ -79,7 +80,6 @@ __all__ = [
     "Invoice",
     "InvoiceItem",
     "LineItem",
-    "InvoiceOrLineItem",
     "Mandate",
     "Order",
     "PaymentIntent",
@@ -94,6 +94,7 @@ __all__ = [
     "SetupIntent",
     "Session",
     "Source",
+    "SourceTransaction",
     "StripeModel",
     "Subscription",
     "SubscriptionItem",
@@ -106,6 +107,8 @@ __all__ = [
     "UpcomingInvoice",
     "UsageRecord",
     "UsageRecordSummary",
+    "VerificationReport",
+    "VerificationSession",
     "WebhookEndpoint",
     "WebhookEventTrigger",
 ]

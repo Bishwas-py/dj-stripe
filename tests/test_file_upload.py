@@ -12,9 +12,9 @@ from djstripe.models import Account, File
 from djstripe.settings import djstripe_settings
 
 from . import FAKE_ACCOUNT, FAKE_FILEUPLOAD_ICON, FAKE_FILEUPLOAD_LOGO
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestFileLink(CreateAccountMixin, TestCase):
@@ -80,5 +80,6 @@ class TestFileUploadStr(CreateAccountMixin):
 
         file = File.sync_from_stripe_data(modified_file_data)
         assert (
-            f"{modified_file_data['filename']}, {FilePurpose.humanize(modified_file_data['purpose'])}"
-        ) == str(file)
+            f"{modified_file_data['filename']},"
+            f" {FilePurpose.humanize(modified_file_data['purpose'])}" == str(file)
+        )

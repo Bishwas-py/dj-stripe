@@ -5,7 +5,6 @@ from copy import deepcopy
 from unittest.mock import patch
 
 import pytest
-import stripe
 from django.test.testcases import TestCase
 
 from djstripe import models
@@ -24,9 +23,9 @@ from . import (
     FAKE_SUBSCRIPTION,
     FAKE_SUBSCRIPTION_ITEM,
 )
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestBalanceTransactionStr(CreateAccountMixin):
@@ -39,8 +38,8 @@ class TestBalanceTransactionStr(CreateAccountMixin):
             modified_balance_transaction
         )
         assert (
-            str(balance_transaction)
-            == f"$20.00 USD ({BalanceTransactionStatus.humanize(modified_balance_transaction['status'])})"
+            str(balance_transaction) == "$20.00 USD"
+            f" ({BalanceTransactionStatus.humanize(modified_balance_transaction['status'])})"
         )
 
 

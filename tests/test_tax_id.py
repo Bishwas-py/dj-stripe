@@ -12,9 +12,9 @@ from djstripe.models import Customer, TaxId
 from djstripe.settings import djstripe_settings
 
 from . import FAKE_CUSTOMER, FAKE_TAX_ID, AssertStripeFksMixin
+from .conftest import CreateAccountMixin
 
 pytestmark = pytest.mark.django_db
-from .conftest import CreateAccountMixin
 
 
 class TestTaxIdStr(CreateAccountMixin, TestCase):
@@ -36,7 +36,9 @@ class TestTaxIdStr(CreateAccountMixin, TestCase):
         tax_id = TaxId.sync_from_stripe_data(FAKE_TAX_ID)
         self.assertEqual(
             str(tax_id),
-            f"{enums.TaxIdType.humanize(FAKE_TAX_ID['type'])} {FAKE_TAX_ID['value']} ({FAKE_TAX_ID['verification']['status']})",
+            (
+                f"{enums.TaxIdType.humanize(FAKE_TAX_ID['type'])} {FAKE_TAX_ID['value']} ({FAKE_TAX_ID['verification']['status']})"
+            ),
         )
 
 
@@ -160,7 +162,7 @@ class TestTransfer(CreateAccountMixin, AssertStripeFksMixin, TestCase):
         tax_id_retrieve_mock.assert_called_once_with(
             id=FAKE_CUSTOMER["id"],
             nested_id=FAKE_TAX_ID["id"],
-            expand=[],
+            expand=["customer"],
             stripe_account=tax_id.djstripe_owner_account.id,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
@@ -183,4 +185,5 @@ class TestTransfer(CreateAccountMixin, AssertStripeFksMixin, TestCase):
             id=FAKE_CUSTOMER["id"],
             api_key=djstripe_settings.STRIPE_SECRET_KEY,
             stripe_version=djstripe_settings.STRIPE_API_VERSION,
+            expand=[],
         )
